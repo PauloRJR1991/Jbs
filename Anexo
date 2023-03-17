@@ -1,0 +1,73 @@
+ private void InitializeProvider()
+        {
+            var connection = new GenericDataAccess().GetConnection(ConnectionManager.DefaultDatabase);
+            if (connection == null)
+                return;
+
+            _provider = new AttachmentProvider
+            {
+                DbConnection = connection,
+                ServerAddress = ConnectionManager.Server,
+                Source = ConnectionManager.DataBaseName
+            };
+
+            _tableDocumentCollection = new TableDocumentCollection
+            {
+                DataSource = grdFIRP045.GetVisualControl().DataSource,
+                AutoRefresh = false,
+                MaxSize = ((1024 * 1024) * 15),
+                Name = this.DataSetcFIRP2305.FIRP045.TableName,
+                BindedProperty = ColumnNames.cArquivoDbDoc,
+                MaxNumberOfFiles = 1
+                //número máximo de arquivos que o usuário poderá incluir.
+                //Por default, o valor da propriedade MaxNumberFiles é igual a -1. O que significa que pode adicionar quantos arquivos desejar     
+            };
+
+            _tableDocumentCollection.Id.AddRange(this.DataSetcFIRP2305.FIRP045.PrimaryKey.Select(pk => pk.ColumnName).ToList());
+
+            _provider.TableDocumentCollectionList.Add(_tableDocumentCollection);
+
+            _provider.Config();
+
+            CheckDocumentServiceConnectivity();
+
+            var tableDoc = _provider.TableDocumentCollectionList
+                       .Where(t => t.Name.Equals(this.DataSetcFIRP2305.FIRP045.TableName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+
+            if (tableDoc != null)
+            {
+                attachmentFile = new RepositoryItemAttachmentControlEdit(_provider, tableDoc);
+                attachmentFile.BeforeShowPopup += (o, args) =>
+                {
+                    _attachmentFile_BeforeShowPopup();
+                };
+
+                grcArquivoDbDoc.GetVisualControl().ColumnEdit = attachmentFile;
+            }
+            else
+            {
+                //Ocorreu uma falha ao carregar os arquivos anexos!.
+                MsgBox.ShowError(CodeBehindHelper.GetDataBaseMessage(cFormName, 1, null));
+            }
+
+        }
+
+        public void _attachmentFile_BeforeShowPopup()
+        {
+            attachmentFile.AttachmentControlEditor.DeleteButtonVisible = bIsAllowDeleteFile;
+        }
+
+        private void CheckDocumentServiceConnectivity()
+        {
+            var msgerror = string.Empty;
+            try
+            {
+                _provider.CheckConnection();
+            }
+            catch (Exception ex)
+            {
+                _provider = null;
+                msgerror = ex.Message;
+                MsgBox.ShowError(msgerror);
+            }
+        }
